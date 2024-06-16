@@ -217,8 +217,8 @@
             document.getElementById("value").innerText = value;
 
             // Set profile pictures
-            document.getElementById("userProfilePic").src = `https://<YOUR_S3_BUCKET_NAME>.s3.amazonaws.com/profile_pictures/${name}.jpg`;
-            document.getElementById("oppProfilePic").src = `https://<YOUR_S3_BUCKET_NAME>.s3.amazonaws.com/profile_pictures/${oppName}.jpg`;
+            document.getElementById("userProfilePic").src = `https://tictactoe-profile-pictures-unique-name.s3.amazonaws.com/profile_pictures/${name}.jpg`;
+            document.getElementById("oppProfilePic").src = `https://tictactoe-profile-pictures-unique-name.s3.amazonaws.com/profile_pictures/${oppName}.jpg`;
         });
 
         document.querySelectorAll(".btn").forEach(e => {
