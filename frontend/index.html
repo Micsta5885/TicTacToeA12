@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href="https://fonts.googleapis.com/css2?family=Tilt+Warp&display=swap" rel="stylesheet">
+    <title>Tic Tac Toe</title>
+    <style>
+        body {
+            background-color: #d3d3d3; /* Szare tło */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: black; /* Czarny kolor napisów */
+            font-family: 'Tilt Warp', cursive;
+        }
+
+        h1 {
+            margin: 50px 0 20px 0;
+            font-size: 4rem;
+            color: black; /* Czarny kolor napisów */
+        }
+
+        input, button {
+            background-color: transparent;
+            color: black; /* Czarny kolor napisów */
+            border: 1px solid black; /* Czarny kolor obramówek */
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        button {
+            width: 250px; 
+        }
+
+        button:hover {
+            background-color: rgba(0, 0, 0, 0.2); /* Czarny kolor przy najechaniu */
+        }
+
+        #cont {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 10px;
+            margin: auto;
+        }
+
+        .btn {
+            background-color: #d3d3d3; /* Szare tło */
+            color: black; /* Czarny kolor napisów */
+            font-size: 2rem;
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            border: 2px solid black; /* Czarny kolor obramówek */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn_clicked {
+            color: black; /* Czarny kolor napisów */
+        }
+        .btn:hover {
+            background-color: rgba(0, 0, 0, 0.1); /* Czarny kolor przy najechaniu */
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: black; /* Czarny kolor napisów */
+            text-align: center;
+        }
+
+        #loading {
+            width: 50px;
+        }
+
+        #logout {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        #game {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Tic Tac Toe</h1>
+
+    <div id="auth">
+        <div id="register">
+            <h2>Register</h2>
+            <input type="email" id="register-email" placeholder="Email">
+            <input type="password" id="register-password" placeholder="Password">
+            <button onclick="register()">Register</button>
+        </div>
+        <div id="confirm">
+            <h2>Confirm</h2>
+            <input type="email" id="confirm-email" placeholder="Email">
+            <input type="text" id="confirm-code" placeholder="Verification Code">
+            <button onclick="confirm()">Confirm</button>
+        </div>
+        <div id="login">
+            <h2>Login</h2>
+            <input type="email" id="login-email" placeholder="Email">
+            <input type="password" id="login-password" placeholder="Password">
+            <button onclick="login()">Login</button>
+        </div>
+    </div>
+
+    <div id="game" style="display: none;">
+        <button id="logout" onclick="logout()">Logout</button>
+        <div style="display: flex; justify-content: space-between; width: 100%;">
+            <p id="userCont">You: <span id="user"></span></p>
+            <p id="oppNameCont">Opponent: <span id="oppName"></span></p>
+        </div>
+        <br>
+        <p id="valueCont">You are playing as <span id="value"></span></p>
+        <br>
+        <p id="whosTurn">X's Turn</p>
+        <br>
+        <div>
+            <p style="font-size: 1.2rem;" id="enterName">Enter your name: </p>
+            <input type="text" placeholder="Name" id="name" autocomplete="off">
+        </div>
+        <button id="find">Search for a player</button>
+        <img src="loading.gif" id="loading" alt="">
+        <br>
+        <div id="bigCont">
+            <div id="cont">
+                <button id="btn1" class="btn"></button>
+                <button id="btn2" class="btn"></button>
+                <button id="btn3" class="btn"></button>
+                <button id="btn4" class="btn"></button>
+                <button id="btn5" class="btn"></button>
+                <button id="btn6" class="btn"></button>
+                <button id="btn7" class="btn"></button>
+                <button id="btn8" class="btn"></button>
+                <button id="btn9" class="btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("bigCont").style.display = "none";
+        document.getElementById("userCont").style.display = "none";
+        document.getElementById("oppNameCont").style.display = "none";
+        document.getElementById("valueCont").style.display = "none";
+        document.getElementById("whosTurn").style.display = "none";
+
+        const socket = io({ path: '/socket.io' });
+
+        let name;
+        let myTurn = false;
+
+        document.getElementById("find").addEventListener("click", function () {
+            name = document.getElementById("name").value;
+            console.log("Rozpoczynanie wyszukiwania z nazwą: ", name);
+
+            document.getElementById("user").innerText = name;
+
+            if (name == null || name == '') {
+                alert("You must enter your name");
+            } else {
+                console.log("Emitowanie żądania wyszukiwania dla: ", name);
+                socket.emit("find", { name: name });
+
+                document.getElementById("loading").style.display = "block";
+                document.getElementById("find").disabled = true;
+            }
+        });
+
+        socket.on("find", (e) => {
+            console.log("Otrzymano dane o grze: ", e);
+            let allPlayersArray = e.allPlayersArray;
+            console.log(allPlayersArray);
+
+            if (name != '') {
+                document.getElementById("userCont").style.display = "block";
+                document.getElementById("oppNameCont").style.display = "block";
+                document.getElementById("valueCont").style.display = "block";
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("name").style.display = "none";
+                document.getElementById("find").style.display = "none";
+                document.getElementById("enterName").style.display = "none";
+                document.getElementById("bigCont").style.display = "block";
+                document.getElementById("whosTurn").style.display = "block";
+                document.getElementById("whosTurn").innerText = "X's Turn";
+            }
+
+            let oppName;
+            let value;
+            myTurn = (value === 'X');
+
+            const foundObject = allPlayersArray.find(obj => obj.p1.p1name == `${name}` || obj.p2.p2name == `${name}`);
+            if (foundObject) {
+                oppName = foundObject.p1.p1name === name ? foundObject.p2.p2name : foundObject.p1.p1name;
+                value = foundObject.p1.p1name === name ? foundObject.p1.p1value : foundObject.p2.p2value;
+                myTurn = value === 'X';
+            }
+
+            document.getElementById("oppName").innerText = oppName;
+            document.getElementById("value").innerText = value;
+        });
+
+        document.querySelectorAll(".btn").forEach(e => {
+            e.addEventListener("click", function () {
+                if (!myTurn || this.innerText !== '') {
+                    console.log("Nie twoja tura lub przycisk już użyty");
+                    return;
+                }
+
+                let value = document.getElementById("value").innerText;
+                this.innerText = value;
+                this.classList.add('btn_clicked');
+
+                this.disabled = true;
+
+                socket.emit("playing", { value: value, id: this.id, name: name });
+            });
+        });
+
+        socket.on("playing", (e) => {
+            const foundObject = (e.allPlayers).find(obj => obj.p1.p1name == `${name}` || obj.p2.p2name == `${name}`);
+
+            p1id = foundObject.p1.p1move;
+            p2id = foundObject.p2.p2move;
+
+            if ((foundObject.sum) % 2 == 0) {
+                document.getElementById("whosTurn").innerText = "O's Turn";
+            } else {
+                document.getElementById("whosTurn").innerText = "X's Turn";
+            }
+
+            if (p1id != '') {
+                document.getElementById(`${p1id}`).innerText = "X";
+                document.getElementById(`${p1id}`).disabled = true;
+                document.getElementById(`${p1id}`).style.color = "black"; /* Czarny kolor napisów */
+            }
+            if (p2id != '') {
+                document.getElementById(`${p2id}`).innerText = "O";
+                document.getElementById(`${p2id}`).disabled = true;
+                document.getElementById(`${p2id}`).style.color = "black"; /* Czarny kolor napisów */
+            }
+
+            check(name, foundObject.sum);
+
+            let myValue = document.getElementById("value").innerText;
+            myTurn = e.currentPlayerTurn === myValue;
+
+            document.querySelectorAll(".btn").forEach(button => {
+                if (!myTurn) {
+                    button.setAttribute('disabled', 'true');
+                } else if (!button.innerText) {
+                    button.removeAttribute('disabled');
+                }
+            });
+        });
+
+        socket.on("gameOver", (e) => {
+            alert(e.message);
+            resetGame();
+        });
+
+        function check(name, sum) {
+            document.getElementById("btn1").innerText == '' ? b1 = "a" : b1 = document.getElementById("btn1").innerText;
+            document.getElementById("btn2").innerText == '' ? b2 = "b" : b2 = document.getElementById("btn2").innerText;
+            document.getElementById("btn3").innerText == '' ? b3 = "c" : b3 = document.getElementById("btn3").innerText;
+            document.getElementById("btn4").innerText == '' ? b4 = "d" : b4 = document.getElementById("btn4").innerText;
+            document.getElementById("btn5").innerText == '' ? b5 = "e" : b5 = document.getElementById("btn5").innerText;
+            document.getElementById("btn6").innerText == '' ? b6 = "f" : b6 = document.getElementById("btn6").innerText;
+            document.getElementById("btn7").innerText == '' ? b7 = "g" : b7 = document.getElementById("btn7").innerText;
+            document.getElementById("btn8").innerText == '' ? b8 = "h" : b8 = document.getElementById("btn8").innerText;
+            document.getElementById("btn9").innerText == '' ? b9 = "i" : b9 = document.getElementById("btn9").innerText;
+
+            if ((b1 == b2 && b2 == b3) || (b4 == b5 && b5 == b6) || (b7 == b8 && b8 == b9) || (b1 == b4 && b4 == b7) || (b2 == b5 && b5 == b8) || (b3 == b6 && b6 == b9) || (b1 == b5 && b5 == b9) || (b3 == b5 && b5 == b7)) {
+                socket.emit("gameOver", { name: name });
+
+                setTimeout(() => {
+                    sum % 2 == 0 ? alert("X WON !!") : alert("O WON !!");
+
+                    setTimeout(() => {
+                        resetGame();
+                    }, 2000);
+                }, 100);
+            } else if (sum == 10) {
+                socket.emit("gameOver", { name: name });
+
+                setTimeout(() => {
+                    alert("DRAW!!");
+
+                    setTimeout(() => {
+                        resetGame();
+                    }, 2000);
+                }, 100);
+            }
+        }
+
+        function resetGame() {
+            document.getElementById("bigCont").style.display = "none";
+            document.getElementById("whosTurn").style.display = "none";
+            document.getElementById("find").style.display = "block";
+            document.getElementById("find").disabled = false;
+            document.querySelectorAll(".btn").forEach(button => {
+                button.innerText = '';
+                button.removeAttribute('disabled');
+            });
+            document.getElementById("value").innerText = '';
+            document.getElementById("userCont").style.display = "none";
+            document.getElementById("oppNameCont").style.display = "none";
+            document.getElementById("name").style.display = "block";
+            document.getElementById("enterName").style.display = "block";
+            document.getElementById("find").style.display = "block";
+        }
+
+        function register() {
+            const email = document.getElementById("register-email").value;
+            const password = document.getElementById("register-password").value;
+
+            fetch('http://localhost:3000/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            }).then(response => response.text())
+              .then(data => alert(data))
+              .catch(error => console.error('Error:', error));
+        }
+
+        function confirm() {
+            const email = document.getElementById("confirm-email").value;
+            const code = document.getElementById("confirm-code").value;
+
+            fetch('http://localhost:3000/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, code })
+            }).then(response => response.text())
+              .then(data => alert(data))
+              .catch(error => console.error('Error:', error));
+        }
+
+        function login() {
+            const email = document.getElementById("login-email").value;
+            const password = document.getElementById("login-password").value;
+
+            fetch('http://localhost:3000/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            }).then(response => response.json())
+              .then(data => {
+                localStorage.setItem('accessToken', data.accessToken);
+                document.getElementById("auth").style.display = "none";
+                document.getElementById("game").style.display = "block";
+              })
+              .catch(error => console.error('Error:', error));
+        }
+
+        function logout() {
+            socket.emit("logout", { name: name });
+            localStorage.removeItem('accessToken');
+            document.getElementById("auth").style.display = "block";
+            document.getElementById("game").style.display = "none";
+            resetGame();
+        }
+    </script>
+</body>
+</html>
